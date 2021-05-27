@@ -49,6 +49,29 @@ Array.prototype.unique = function() {
 
 ////////////////////
 
+var listInferenceURL2 = "http://localhost:3339/get_listinference"
+var queryURL2 = "http://localhost:3339/query/?startTime=2021-05-14%2009:43:04&endTime=2021-05-20%2012:42:17&inspectStatus=A&revert=1"
+var filterURL2 = "http://localhost:3339/api/get_data_riceinspectprocessing_usernametimestamp"
+
+
+
+function initData() {
+  http.get(listInferenceURL2)
+  console.log("listInferenceURL2 is executed")
+  setTimeout(function(){ 
+    http.get(queryURL2) 
+    console.log("queryURL2 is executed")
+  }, 5000);
+  setTimeout(function(){ http.get(
+    filterURL2) 
+    console.log("filterURL2 is executed")
+  }, 8000);
+}
+
+initData()
+
+setInterval(function(){ initData() }, 900000);
+
 
 
 app.get('/get_table_riceinspectprocessing', function(req, res) {
@@ -288,7 +311,7 @@ app.get('/api/get_data_riceinspectprocessing_usernametimestamp', function(req, r
                 }
               }
               
-              console.log(usrArray)
+              //console.log(usrArray)
               // Add new set of non-duplicate users into usrUnique_all
               usrUnique_all = usrArray.unique();
               //usrUnique_all = func.findUniqueUser(usrArray)
