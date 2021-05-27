@@ -22,7 +22,32 @@ var query_data_riceinspectprocessing_URL = "https://i8svvrd7uc.execute-api.ap-so
 var filter_UsernameTimestamp_URL = "https://i8svvrd7uc.execute-api.ap-southeast-1.amazonaws.com/production/api/get_data_riceinspectprocessing_usernametimestamp"
 
 
-  
+
+//Find all unique users new function
+
+Array.prototype.contains = function(v) {
+  for (var i = 0; i < this.length; i++) {
+    if (this[i] === v) return true;
+  }
+  return false;
+};
+
+Array.prototype.unique = function() {
+  var arr = [];
+  for (var i = 0; i < this.length; i++) {
+    if (!arr.contains(this[i])) {
+      arr.push(this[i]);
+    }
+  }
+  return arr;
+}
+
+//var duplicates = ["user4","user4","userc","userc","tungmeng"];
+//var uniques = duplicates.unique(); // result = [1,3,4,2,8]
+
+//console.log(uniques);
+
+////////////////////
 
 
 
@@ -265,7 +290,8 @@ app.get('/api/get_data_riceinspectprocessing_usernametimestamp', function(req, r
               
               console.log(usrArray)
               // Add new set of non-duplicate users into usrUnique_all
-              usrUnique_all = func.findUniqueUser(usrArray)
+              usrUnique_all = usrArray.unique();
+              //usrUnique_all = func.findUniqueUser(usrArray)
               console.log(usrUnique_all);
 
 
