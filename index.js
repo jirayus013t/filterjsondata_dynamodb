@@ -52,10 +52,12 @@ Array.prototype.unique = function() {
 var listInferenceURL2 = "http://localhost:3339/get_listinference"
 var queryURL2 = "http://localhost:3339/query/?startTime=2021-05-14%2009:43:04&endTime=2021-05-20%2012:42:17&inspectStatus=A&revert=1"
 var filterURL2 = "http://localhost:3339/api/get_data_riceinspectprocessing_usernametimestamp"
-
+var querytableURL2 = "http://localhost:3339/query_table_riceinspectprocessing"
 
 
 function initData() {
+  http.get(querytableURL2)
+  console.log("querytableURL2 is executed")
   http.get(listInferenceURL2)
   console.log("listInferenceURL2 is executed")
   setTimeout(function(){ 
