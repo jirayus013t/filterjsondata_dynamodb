@@ -7,19 +7,16 @@ const https = require('https');
 const http = require('http');
 const { timeStamp } = require('console');
 const e = require('express');
+var standard = require('./standard')
+var _ = require('lodash');
+const { each } = require('lodash');
+const { json } = require('express');
+
 
 //URL that data has been taken from dynamodb
 var riceInspectProcessingUrl = "https://4skomnp9df.execute-api.ap-southeast-1.amazonaws.com/default/Gafrana_get_data_RiceInferenceProcessing"
 var listInference = "http://13.212.86.129:3000/listInference"
 
-//get inference for further processes
-var getlistinference_URL = "https://i8svvrd7uc.execute-api.ap-southeast-1.amazonaws.com/production/get_listinference"
-var getALL_filtercontent_URL = "https://i8svvrd7uc.execute-api.ap-southeast-1.amazonaws.com/production/grafana/filtercontent"
-
-//all query and filtering data
-var query_table_riceinspectprocessing_URL = "https://i8svvrd7uc.execute-api.ap-southeast-1.amazonaws.com/production/query_table_riceinspectprocessing"
-var query_data_riceinspectprocessing_URL = "https://i8svvrd7uc.execute-api.ap-southeast-1.amazonaws.com/production/query/?startTime=2021-05-14%2009:43:04&endTime=2021-05-20%2012:42:17&inspectStatus=A&revert=1"
-var filter_UsernameTimestamp_URL = "https://i8svvrd7uc.execute-api.ap-southeast-1.amazonaws.com/production/api/get_data_riceinspectprocessing_usernametimestamp"
 
 
 
@@ -42,32 +39,23 @@ Array.prototype.unique = function() {
   return arr;
 }
 
-//var duplicates = ["user4","user4","userc","userc","tungmeng"];
-//var uniques = duplicates.unique(); // result = [1,3,4,2,8]
 
-//console.log(uniques);
 
 ////////////////////
 
-var listInferenceURL2 = "http://localhost:3339/get_listinference"
-var queryURL2 = "http://localhost:3339/query/?startTime=2021-05-14%2009:43:04&endTime=2021-05-20%2012:42:17&inspectStatus=A&revert=1"
-var filterURL2 = "http://localhost:3339/api/get_data_riceinspectprocessing_usernametimestamp"
+
+var queryURL2 = "http://localhost:3339/query/?&Status=All&revert=1"
 var querytableURL2 = "http://localhost:3339/query_table_riceinspectprocessing"
 
 
+//For production auto loop
 function initData() {
   http.get(querytableURL2)
   console.log("querytableURL2 is executed")
-  http.get(listInferenceURL2)
-  console.log("listInferenceURL2 is executed")
   setTimeout(function(){ 
     http.get(queryURL2) 
     console.log("queryURL2 is executed")
   }, 5000);
-  setTimeout(function(){ http.get(
-    filterURL2) 
-    console.log("filterURL2 is executed")
-  }, 8000);
 }
 
 initData()
@@ -85,8 +73,8 @@ app.get('/get_table_riceinspectprocessing', function(req, res) {
 
 var table_riceInspectProcessing =
   {
-    columns: [{text: 'myDate', type: 'time'}, {text: 'serverID', type: 'number'}, {text: 'username', type: 'string'}, 
-    {text: 'formNameTH', type: 'string'}, {text: 'inspectStatus', type: 'string'}, {text: 'riceTypeTH', type: 'string'}],
+    columns: [{text: 'Data and Time', type: 'time'}, {text: 'Server ID', type: 'number'}, {text: 'Username', type: 'string'}, 
+    {text: 'Standard', type: 'string'}, {text: 'Status', type: 'string'}, {text: 'riceTypeTH', type: 'string'}],
     rows: [
       [ 1234567, 'SE', 123 ],
       [ 1234567, 'DE', 231 ],
@@ -99,9 +87,9 @@ var table_riceInspectProcessing =
 
 app.get('/query_table_riceinspectprocessing', function(req, res) {
 
-  let url = riceInspectProcessingUrl;
+  let url = listInference;
 
-  https.get(url,(res) => {
+  http.get(url,(res) => {
       let body = "";
   
       res.on("data", (chunk) => {
@@ -112,15 +100,15 @@ app.get('/query_table_riceinspectprocessing', function(req, res) {
               let json = JSON.parse(body); 
               table_riceInspectProcessing.rows = []   
               // do something with JSON by filtering riceInspectProcessing data
-              for (i = 0; i < json.content.length; i++) {
+              for (i = 0; i < json.data.length; i++) {
 
                 table_riceInspectProcessing.rows.push([
-                  new Date(json.content[i].myDate).getTime(), 
-                  json.content[i].serverID,
-                  json.content[i].username,
-                  json.content[i].formNameTH,
-                  json.content[i].inspectStatus,
-                  json.content[i].riceTypeTH
+                  new Date(json.data[i].myDate).getTime(), 
+                  json.data[i].serverID,
+                  json.data[i].username,
+                  json.data[i].standardName,
+                  json.data[i].Status,
+                  json.data[i].riceTypeName
                 ])  
                              
               }
@@ -166,12 +154,283 @@ app.get('/grafana/filtercontent', (req, res) => {
   
 })
 
+app.get('/grafana/listricetypename', (req, res) => {
+  res.json(riceType_timestamp)
+  
+})
+
+app.get('/grafana/liststandard', (req, res) => {
+  res.json(standardTimestamp)
+  
+})
+
+
+app.get('/grafana/liststandard_homrice', (req, res) => {
+  res.json(standardTimestamp_homRice)
+  
+})
+
+app.get('/grafana/liststandard_hommalirice', (req, res) => {
+  res.json(standardTimestamp_homMaliRice)
+  
+})
+
+standardTimestamp_homMaliRice
+
+//--------------------------------------------------list and filterstandard for whiteRiceStandard--------------------//
+
+var test = []
+var standardTimestamp = [] 
+app.get('/query_listStandardName/', function(req, res) {
+  var username = req.query.username
+  var standardType = req.query.standard
+  let url = listInference;
+  
+  http.get(url,(res) => {
+      let body = "";
+  
+      res.on("data", (chunk) => {
+          body += chunk;
+      });
+      res.on("end", () => {
+          try {    
+              let json = JSON.parse(body); 
+              test = []
+              standardTimestamp =[]
+              // do something with JSON by filtering riceInspectProcessing data
+              _.each(json.data, function(inside) {
+
+                if(inside.username == username){
+                  var k = _.filter(standard[standardType], function(t) {
+                      return t == inside.standardName
+                  });
+                }
+                
+                _.each(k,function(kk){
+                  test.push(kk+"_"+username)
+                })
+                
+                
+              });
+              console.log(test)
+              standardNameUnique_all = test.unique();
+              console.log(standardNameUnique_all);
+
+              _.each(standardNameUnique_all, function(i) {
+                myObj = {
+                  "target": i,
+                  "datapoints": [
+                       
+                  ]
+                }
+                standardTimestamp.push(myObj);  
+              })
+
+              console.log(standardTimestamp)
+              
+
+              _.each(json.data, function(inside) {
+                if(inside.username == username){
+                  //To check whether the created json structure (standardTimestamp) username is match with inference url or not
+                  _.each(standardTimestamp, function(j) {
+                    if(inside.standardName+"_"+inside.username == j.target){
+                      j.datapoints.push([1, new Date(inside.myDate).getTime()])
+                    }
+                  })
+                }
+              })
+             console.log(standardTimestamp)
+            
+                        
+          } catch (error) {
+              console.log("This is the part where it is error");
+              console.error(error.message);
+          };
+      });      
+  }).on("error", (error) => {
+      console.error(error.message);
+      
+  });
+  res.json(standardTimestamp);
+})
 
 
 
-var array_listInference = []
-app.get('/get_listinference', function(req, res) {
+//--------------------------------------------------list and filterstandard for homRiceStandard--------------------//
 
+var test_homRice = []
+var standardTimestamp_homRice = [] 
+app.get('/query_listStandardName/homrice', function(req, res) {
+  var username = req.query.username
+  var standardType = req.query.standard
+  let url = listInference;
+  
+  http.get(url,(res) => {
+      let body = "";
+  
+      res.on("data", (chunk) => {
+          body += chunk;
+      });
+      res.on("end", () => {
+          try {    
+              let json = JSON.parse(body); 
+              test_homRice = []
+              standardTimestamp_homRice =[]
+              // do something with JSON by filtering riceInspectProcessing data
+              _.each(json.data, function(inside) {
+
+                if(inside.username == username){
+                  var k = _.filter(standard[standardType], function(t) {
+                      return t == inside.standardName
+                  });
+                }
+                
+                _.each(k,function(kk){
+                  test_homRice.push(kk+"_"+username)
+                })
+                
+                
+              });
+              console.log(test_homRice)
+              standardNameUnique_all = test_homRice.unique();
+              console.log(standardNameUnique_all);
+
+              _.each(standardNameUnique_all, function(i) {
+                myObj = {
+                  "target": i,
+                  "datapoints": [
+                       
+                  ]
+                }
+                standardTimestamp_homRice.push(myObj);  
+              })
+
+              console.log(standardTimestamp_homRice)
+              
+
+              _.each(json.data, function(inside) {
+                if(inside.username == username){
+                  //To check whether the created json structure (standardTimestamp_homRice) username is match with inference url or not
+                  _.each(standardTimestamp_homRice, function(j) {
+                    if(inside.standardName+"_"+inside.username == j.target){
+                      j.datapoints.push([1, new Date(inside.myDate).getTime()])
+                    }
+                  })
+                }
+              })
+             console.log(standardTimestamp_homRice)
+            
+                        
+          } catch (error) {
+              console.log("This is the part where it is error");
+              console.error(error.message);
+          };
+      });      
+  }).on("error", (error) => {
+      console.error(error.message);
+      
+  });
+  res.json(standardTimestamp_homRice);
+})
+
+
+
+
+
+
+//--------------------------------------------------list and filterstandard for hommaliRiceStandard--------------------//
+
+var test_homMaliRice = []
+var standardTimestamp_homMaliRice = [] 
+app.get('/query_listStandardName/hommalirice', function(req, res) {
+  var username = req.query.username
+  var standardType = req.query.standard
+  let url = listInference;
+  
+  http.get(url,(res) => {
+      let body = "";
+  
+      res.on("data", (chunk) => {
+          body += chunk;
+      });
+      res.on("end", () => {
+          try {    
+              let json = JSON.parse(body); 
+              test_homMaliRice = []
+              standardTimestamp_homMaliRice =[]
+              // do something with JSON by filtering riceInspectProcessing data
+              _.each(json.data, function(inside) {
+
+                if(inside.username == username){
+                  var k = _.filter(standard[standardType], function(t) {
+                      return t == inside.standardName
+                  });
+                }
+                
+                _.each(k,function(kk){
+                  test_homMaliRice.push(kk+"_"+username)
+                })
+                
+                
+              });
+              console.log(test_homMaliRice)
+              standardNameUnique_all = test_homMaliRice.unique();
+              console.log(standardNameUnique_all);
+
+              _.each(standardNameUnique_all, function(i) {
+                myObj = {
+                  "target": i,
+                  "datapoints": [
+                       
+                  ]
+                }
+                standardTimestamp_homMaliRice.push(myObj);  
+              })
+
+              console.log(standardTimestamp_homMaliRice)
+              
+
+              _.each(json.data, function(inside) {
+                if(inside.username == username){
+                  //To check whether the created json structure (standardTimestamp_homMaliRice) username is match with inference url or not
+                  _.each(standardTimestamp_homMaliRice, function(j) {
+                    if(inside.standardName+"_"+inside.username == j.target){
+                      j.datapoints.push([1, new Date(inside.myDate).getTime()])
+                    }
+                  })
+                }
+              })
+             console.log(standardTimestamp_homMaliRice)
+            
+                        
+          } catch (error) {
+              console.log("This is the part where it is error");
+              console.error(error.message);
+          };
+      });      
+  }).on("error", (error) => {
+      console.error(error.message);
+      
+  });
+  res.json(standardTimestamp_homMaliRice);
+})
+
+
+
+
+
+
+
+
+//--------------------------------------------------list and filterRiceType--------------------//
+
+//Filter unique riceTypeName and push into form
+var riceTypeArray = []
+var riceTypeUnique_all
+var riceType_timestamp = []
+
+app.get('/query_listRiceTypeName', function(req, res) {
+  var username = req.query.username
   let url = listInference;
 
   http.get(url,(res) => {
@@ -183,18 +442,57 @@ app.get('/get_listinference', function(req, res) {
       res.on("end", () => {
           try {    
               let json = JSON.parse(body); 
-              array_listInference = []    
+              riceTypeArray = []
+              riceType_timestamp = []
               // do something with JSON by filtering riceInspectProcessing data
               for (i = 0; i < json.data.length; i++) {
-                var obj = { 
-                  username_listInference: json.data[i].username+"_listInference",
-                  processedDate_listInference: json.data[i].processedDate,
-                  imageURL: json.data[i].imageURL }; 
-
-                array_listInference.push(obj)  
-                             
+                if(json.data[i].username+"_ricetype" == username){
+                  //colect all riceTypeName including duplicate riceTypeName for specific user
+                  /*
+                  if(json.data[i].riceTypeName != null){
+                    riceTypeArray.push(json.data[i].riceTypeName+"_"+json.data[i].username)
+                  }
+                  */
+                  riceTypeArray.push(json.data[i].riceTypeName+"_"+json.data[i].username)
               }
-                           
+            }
+            // Add new set of non-duplicate riceTypeName into riceTypeUnique_all
+            //console.log(riceTypeArray)
+            riceTypeUnique_all = riceTypeArray.unique();
+            console.log(riceTypeUnique_all);
+
+
+            //----------------------Finalize process putting riceTypeName in fakesimplejsondatasource Structure----------------//
+            //----------------------Initiate mock up riceTypeName structure--------//
+            for(i=0;i<riceTypeUnique_all.length; i++){
+
+              myObj = {
+                "target": riceTypeUnique_all[i],
+                "datapoints": [
+                     
+                ]
+              }
+              riceType_timestamp.push(myObj);  
+            }
+
+            //loop through endpointURL again and Push time info into datapoints of targets
+            
+            for(i = 0; i < json.data.length; i++){
+              if(json.data[i].username+"_ricetype" == username){
+                //console.log(json.data[i].riceTypeName+"_"+json.data[i].username)
+                for(j=0;j<riceType_timestamp.length;j++){
+                  if(json.data[i].riceTypeName+"_"+json.data[i].username ==riceType_timestamp[j].target){
+                    //console.log(json.data[i].riceTypeName+"_"+json.data[i].username)
+                    riceType_timestamp[j].datapoints.push([1, new Date(json.data[i].myDate).getTime()])
+                  }
+                  
+                }
+              }
+              
+            }
+
+            
+                        
           } catch (error) {
               console.log("This is the part where it is error");
               console.error(error.message);
@@ -204,7 +502,7 @@ app.get('/get_listinference', function(req, res) {
       console.error(error.message);
       
   });
-  res.json(array_listInference);
+  res.json(riceType_timestamp);
 })
 
 
@@ -213,17 +511,16 @@ app.get('/get_listinference', function(req, res) {
 
 
 
-////////////////////////////////Filter content from /listInference and /riceInspectProcessing
+////////////////////////////////Filter content from /listInference 
 var filterContent = []
 app.get('/query', function(req, res) {
  
   //res.send("StartTime is set to " + req.query.startTime + ". EndTime is set to " + req.query.endTime + ". inspectStatus = "+ req.query.inspectStatus)
-  var startTime = new Date(req.query.startTime).getTime() 
-  var endTime = new Date(req.query.endTime).getTime() 
-  var inspectStatus = req.query.inspectStatus
-  let url = riceInspectProcessingUrl;
 
-  https.get(url,(res) => {
+  var Status = req.query.Status
+  let url = listInference;
+
+  http.get(url,(res) => {
       let body = "";
   
       res.on("data", (chunk) => {
@@ -235,34 +532,31 @@ app.get('/query', function(req, res) {
                        
               // do something with JSON by filtering riceInspectProcessing data
               console.log(req.query.revert)
+              console.log(Status)
               if(req.query.revert==1){
                 filterContent = []
-                // Push all riceInspectProcessing
-                for (i = 0; i < json.content.length; i++) {
-                  if(json.content[i].inspectStatus == inspectStatus){
-                    filterContent.push(json.content[i])          
-                  }              
-                }
-                // Push all listInference 
-                for(i=0;i<array_listInference.length;i++){
-                    filterContent.push(array_listInference[i])
-                    
-                }
 
-              }
-              if(req.query.revert==0){
-                filterContent = []
-                for (i = 0; i < json.content.length; i++) {              
-                  if(json.content[i].myDate >= req.query.startTime && json.content[i].myDate <= req.query.endTime && json.content[i].inspectStatus == inspectStatus){
-                    filterContent.push(json.content[i])
-                  } 
-                  if(array_listInference[i].processedDate_listInference >= req.query.startTime && array_listInference[i].processedDate_listInference <= req.query.endTime){
-                    filterContent.push(array_listInference[i])
+                // Push all listInference and checking condition
+                for (i = 0; i < json.data.length; i++) {
+                  if(Status == "All"){
+                    filterContent.push(json.data[i])    
                   }
+                  if(Status == "Save"){
+                    if(json.data[i].Status == Status){
+                      filterContent.push(json.data[i])          
+                    }     
+                  }
+                  if(Status == "Unsave"){
+                    if(json.data[i].Status == Status){
+                      filterContent.push(json.data[i])          
+                    }     
+                  }
+                           
                 }
               }
-              
-              
+
+           
+              filterUsernameTimestamp()
               
                           
           } catch (error) {
@@ -274,7 +568,9 @@ app.get('/query', function(req, res) {
       console.error(error.message);
       
   });
-  res.json(filterContent);
+  
+  //res.json(filterContent);
+  res.json(username_timestamp)
 })
 
 
@@ -283,13 +579,8 @@ username_timestamp = []
 var usrUnique_all;
 var myObj;
 
-app.get('/api/get_data_riceinspectprocessing_usernametimestamp', function(req, res){
-  //setCORSHeaders(res);
-  //let url = riceInspectProcessingUrl;
-  //choose /filtercontent if you want to filterdata from this path first
-  //let url = "http://localhost:3339/grafana/filtercontent"
-
-              usrArray = []  
+function filterUsernameTimestamp(){
+  usrArray = []  
               username_timestamp = []          
               
 
@@ -300,18 +591,8 @@ app.get('/api/get_data_riceinspectprocessing_usernametimestamp', function(req, r
                   usrArray.push(filterContent[i].username)
                 }
               }
-              for (i = 0; i < filterContent.length; i++) {              
-                //colect all formNameTH including duplicate users
-                if(filterContent[i].formNameTH != null){
-                  usrArray.push(filterContent[i].formNameTH)
-                }
-              }
-              for (i = 0; i < filterContent.length; i++) {              
-                //colect all username_listInference including duplicate users
-                if(filterContent[i].username_listInference != null){
-                  usrArray.push(filterContent[i].username_listInference)
-                }
-              }
+             
+              
               
               //console.log(usrArray)
               // Add new set of non-duplicate users into usrUnique_all
@@ -332,27 +613,17 @@ app.get('/api/get_data_riceinspectprocessing_usernametimestamp', function(req, r
                 username_timestamp.push(myObj);  
               }
 
+              //Push time info into datapoints of targets
               for(i=0;i<filterContent.length;i++){
                 for(j=0;j<username_timestamp.length;j++){
 
                   if(filterContent[i].username==username_timestamp[j].target){
                     username_timestamp[j].datapoints.push([1, new Date(filterContent[i].myDate).getTime()])
                   }
-                  if(filterContent[i].formNameTH==username_timestamp[j].target){
-                    username_timestamp[j].datapoints.push([1, new Date(filterContent[i].myDate).getTime()])
-                  }
                   
-                  if(filterContent[i].username_listInference==username_timestamp[j].target){
-                    username_timestamp[j].datapoints.push([1, new Date(filterContent[i].processedDate_listInference).getTime()])
-                  }
                 }
               }
-              
-                    
-
-  res.json(username_timestamp);
-  
-});
+}
 
 
 
