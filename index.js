@@ -60,13 +60,26 @@ function initData() {
 
 initData()
 
-setInterval(function(){ initData() }, 900000);
+//setInterval(function(){ initData() }, 900000);
+
+
+app.get('/update_data_listinference', function(req, res) {
+  initData()
+  res.json("Update data listinference function has been executed")
+});
+
+
+app.get('/update_data_RiceInferenceProcessing', function(req, res) {
+  initData()
+  res.json("Update data RiceInspectProcessing function has been executed")
+});
 
 
 
 app.get('/get_table_riceinspectprocessing', function(req, res) {
   res.json(table_riceInspectProcessing);
 });
+
 
 
 // get table from riceinspectprocessing
