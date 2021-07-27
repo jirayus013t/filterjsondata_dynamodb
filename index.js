@@ -188,7 +188,121 @@ app.get('/grafana/liststandard_hommalirice', (req, res) => {
   
 })
 
-standardTimestamp_homMaliRice
+app.get('/grafana/get_query', (req, res) => {
+  res.json(hel)
+  
+})
+
+//standardTimestamp_homMaliRice
+
+
+
+
+//------------------------------Daily, Monthly, and weekly------------------------------//
+var hel 
+
+app.get('/query_timerange/', function(req, res) {
+  var startTime = req.query.starttime
+  var endTime = req.query.endtime
+  let range = req.query.range 
+  let url = listInference;
+  var timerange 
+  
+  if(range == "1h"){
+    timerange = 3600000
+  }else if(range == "1d"){
+    timerange = 86400000
+  }else if(range == "1w"){
+    timerange = 604800000
+  }else if(range == "1m"){
+    timerange = 2592000000
+  }else{
+    timerange = 3600000
+  }
+  
+  console.log(range)
+
+  http.get(url,(res) => {
+      let body = "";
+    
+      res.on("data", (chunk) => {
+          body += chunk;
+      });
+      res.on("end", () => {
+          try { 
+              hel = [
+                {
+                    "target": "timerange",
+                    "datapoints": [
+                        
+                    ]
+                }
+              ]
+              let json = JSON.parse(body);
+              let fakeArray = []
+              let currentTimeUnix = new Date(startTime).getTime()
+              let endTimeUnix = new Date(endTime).getTime()
+              let currentTimeUnixPrev
+              let iteration
+              
+              // do something with JSON by filtering riceInspectProcessing data
+              _.each(json.data, function(inside) {
+
+                if(inside.myDate >= startTime & inside.myDate <= endTime){
+                  //console.log(inside.myDate)
+                  day = new Date(inside.myDate).getTime() 
+                  fakeArray.push(day)
+
+                
+                  
+                }
+                
+              });
+
+        
+              let lowestToHighest = fakeArray.sort((a, b) => a - b);
+              console.log(lowestToHighest)
+              
+              
+              
+              while(currentTimeUnix<=endTimeUnix){
+                  iteration = 0
+                  currentTimeUnixPrev = currentTimeUnix
+                  currentTimeUnix += timerange
+                  console.log(currentTimeUnixPrev + " ----------- "+currentTimeUnix + " ------ limit: " + endTimeUnix + " timerange: "+timerange)
+                  
+                  _.each(lowestToHighest, function(t){
+                    if(t >= currentTimeUnixPrev && t<= currentTimeUnix){
+                      console.log("++++ " +  t  + "  :iteration : " + iteration)
+                      iteration += 1
+                    }
+                  });
+                  console.log("Summation = "+iteration)  
+
+                  if(currentTimeUnix>endTimeUnix){
+                    hel[0].datapoints.push([iteration, endTimeUnix])
+                  }else{
+                    hel[0].datapoints.push([iteration, currentTimeUnix])
+                  }
+                  
+                                    
+              }
+              
+                                
+          } catch (error) {
+              console.log("This is the part where it is error");
+              console.error(error.message);
+          };
+      });      
+  }).on("error", (error) => {
+      console.error(error.message);
+      
+  });
+  res.json(hel);
+})
+
+
+
 
 //--------------------------------------------------list and filterstandard for whiteRiceStandard--------------------//
 
@@ -198,6 +312,7 @@ app.get('/query_listStandardName/', function(req, res) {
   var username = req.query.username
   var standardType = req.query.standard
   let url = listInference;
+
   
   http.get(url,(res) => {
       let body = "";
@@ -212,7 +327,7 @@ app.get('/query_listStandardName/', function(req, res) {
               standardTimestamp =[]
               // do something with JSON by filtering riceInspectProcessing data
               _.each(json.data, function(inside) {
-
+                
                 if(inside.username == username){
                   var k = _.filter(standard[standardType], function(t) {
                       return t == inside.standardName
