@@ -19,7 +19,6 @@ var listInference = "http://13.212.86.129:3000/listInference"
 
 
 
-
 //Find all unique users new function
 
 Array.prototype.contains = function(v) {
@@ -189,18 +188,17 @@ app.get('/grafana/liststandard_hommalirice', (req, res) => {
 })
 
 app.get('/grafana/get_query', (req, res) => {
-  res.json(hel)
-  
+  //res.json(hel)
+  res.json(milIDStructure)
 })
 
 //standardTimestamp_homMaliRice
 
 
 
-
 //------------------------------Daily, Monthly, and weekly------------------------------//
 var hel 
-
+var milIDStructure
 app.get('/query_timerange/', function(req, res) {
   var startTime = req.query.starttime
   var endTime = req.query.endtime
@@ -208,6 +206,7 @@ app.get('/query_timerange/', function(req, res) {
   let url = listInference;
   var timerange 
   
+ 
   if(range == "1h"){
     timerange = 3600000
   }else if(range == "1d"){
@@ -230,6 +229,8 @@ app.get('/query_timerange/', function(req, res) {
       });
       res.on("end", () => {
           try { 
+              let json = JSON.parse(body);
+
               hel = [
                 {
                     "target": "timerange",
@@ -238,42 +239,135 @@ app.get('/query_timerange/', function(req, res) {
                     ]
                 }
               ]
-              let json = JSON.parse(body);
+              
               let fakeArray = []
               let currentTimeUnix = new Date(startTime).getTime()
               let endTimeUnix = new Date(endTime).getTime()
               let currentTimeUnixPrev
               let iteration
-              
-              // do something with JSON by filtering riceInspectProcessing data
-              _.each(json.data, function(inside) {
 
-                if(inside.myDate >= startTime & inside.myDate <= endTime){
-                  //console.log(inside.myDate)
+              if(endTime=="now"){
+                endTimeUnix = Date.now()
+              }
+              
+              // Collect all miller name into list and make it unique
+              let millIDList = []
+              _.each(json.data, function(i){
+                  if(i.username != null){
+                    millIDList.push(i.username)
+                  }           
+              });
+              millIDList = [...new Set(millIDList)];
+             
+              //Initiate Structure
+              milIDStructure = []
+              _.each(millIDList, function(t){
+                let struc = 
+                {
+                  "target": t,
+                  "datapoints": [
+                          
+                  ]
+                }
+                milIDStructure.push(struc)
+              })
+              console.log(milIDStructure)
+
+              //test
+              _.each(json.data, function(inside) {
+                
+                if(new Date(inside.myDate).getTime()  >= currentTimeUnix & new Date(inside.myDate).getTime()  <= endTimeUnix ){
+                  
+                  let tmp = {
+                    "username": inside.username,
+                    "date":  new Date(inside.myDate).getTime() 
+                  }
+                  fakeArray.push(tmp) 
+                }
+                
+              });
+              console.log(fakeArray)
+
+
+              // do something with JSON by filtering riceInspectProcessing data
+             /*
+              _.each(json.data, function(inside) {
+                
+                if(new Date(inside.myDate).getTime()  >= currentTimeUnix & new Date(inside.myDate).getTime()  <= endTimeUnix ){
+                  
                   day = new Date(inside.myDate).getTime() 
                   fakeArray.push(day)
-
                 
                   
                 }
                 
               });
-
-        
+              
               let lowestToHighest = fakeArray.sort((a, b) => a - b);
               console.log(lowestToHighest)
+              */
+              
+
+
+              async function prepareData(usernameInput){
+                console.log("----------Username = "+usernameInput)
+                currentTimeUnix = new Date(startTime).getTime()
+                
+
+                while(currentTimeUnix<=endTimeUnix){
+                  iteration = 0
+                  currentTimeUnixPrev = currentTimeUnix
+                  currentTimeUnix += timerange
+                  //console.log(currentTimeUnixPrev + " ----------- "+currentTimeUnix + " ------ limit: " + endTimeUnix + " timerange: "+timerange)
+                  
+                  _.each(fakeArray, function(t){
+                    if(t.date >= currentTimeUnixPrev && t.date <= currentTimeUnix && t.username == usernameInput){
+                      //console.log("++++ " +  t.date  + "  :iteration : " + iteration)
+                      iteration += 1
+                    }
+                  });
+                  console.log("Summation = "+iteration)  
+                  
+
+                  if(currentTimeUnix>endTimeUnix){
+                    _.each(milIDStructure, function(i){
+                      if(i.target == usernameInput){
+                        i.datapoints.push([iteration, endTimeUnix])
+                      }
+                    });
+                    //hel[0].datapoints.push([iteration, endTimeUnix])
+                  }else{
+                    _.each(milIDStructure, function(i){
+                      if(i.target == usernameInput){
+                        i.datapoints.push([iteration, currentTimeUnix])
+                      }
+                    });
+
+                    //hel[0].datapoints.push([iteration, currentTimeUnix])
+                  }
+                  
+                                    
+              }
+              
+              }
+              //Loop through every miller and prepare indivudual data for each miller
+              _.each(millIDList, function(t){
+                prepareData(t)
+              });
               
               
-              
+
+
+              /*
               while(currentTimeUnix<=endTimeUnix){
                   iteration = 0
                   currentTimeUnixPrev = currentTimeUnix
                   currentTimeUnix += timerange
-                  console.log(currentTimeUnixPrev + " ----------- "+currentTimeUnix + " ------ limit: " + endTimeUnix + " timerange: "+timerange)
+                  //console.log(currentTimeUnixPrev + " ----------- "+currentTimeUnix + " ------ limit: " + endTimeUnix + " timerange: "+timerange)
                   
                   _.each(lowestToHighest, function(t){
                     if(t >= currentTimeUnixPrev && t<= currentTimeUnix){
-                      console.log("++++ " +  t  + "  :iteration : " + iteration)
+                      //console.log("++++ " +  t  + "  :iteration : " + iteration)
                       iteration += 1
                     }
                   });
@@ -287,7 +381,7 @@ app.get('/query_timerange/', function(req, res) {
                   
                                     
               }
-              
+              */
                                 
           } catch (error) {
               console.log("This is the part where it is error");
@@ -298,7 +392,8 @@ app.get('/query_timerange/', function(req, res) {
       console.error(error.message);
       
   });
-  res.json(hel);
+  res.json(milIDStructure);
+  //res.json(hel);
 })
 
 
