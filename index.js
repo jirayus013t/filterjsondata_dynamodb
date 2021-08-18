@@ -40,11 +40,13 @@ Array.prototype.unique = function() {
 
 
 
-////////////////////
-
-
 var queryURL2 = "http://localhost:3339/query/?&Status=All&revert=1"
 var querytableURL2 = "http://localhost:3339/query_table_riceinspectprocessing"
+
+var queryData_Weekly = "http://localhost:3339/query_timerange_weekly/?starttime=2021-01-01T00:00:00&endtime=now"
+var queryData_Daily = "http://localhost:3339/query_timerange_daily/?starttime=2021-01-01T00:00:00&endtime=now"
+var queryData_Monthly = "http://localhost:3339/query_timerange_monthly/?starttime=2021-01-01T00:00:00&endtime=now"
+
 
 
 //For production auto loop
@@ -56,10 +58,31 @@ function initData() {
     console.log("queryURL2 is executed")
   }, 5000);
 }
-
 initData()
 
-//setInterval(function(){ initData() }, 900000);
+
+
+////////////////////
+/*
+  if(range == "1h"){
+    timerange = 3600000
+  }else if(range == "1d"){
+    timerange = 86400000
+  }else if(range == "1w"){
+    timerange = 604800000
+  }else if(range == "1m"){
+    timerange = 2592000000
+  }else{
+    timerange = 3600000
+  }
+  */
+
+http.get(queryData_Weekly)
+http.get(queryData_Daily)
+http.get(queryData_Monthly)
+setInterval(function(){ http.get(queryData_Weekly) }, 86400000);
+setInterval(function(){ http.get(queryData_Daily) }, 86400000);
+setInterval(function(){ http.get(queryData_Monthly) }, 86400000);
 
 
 app.get('/update_data_listinference', function(req, res) {
@@ -187,26 +210,32 @@ app.get('/grafana/liststandard_hommalirice', (req, res) => {
   
 })
 
+
+//Weekly Query
 app.get('/grafana/get_query', (req, res) => {
-  //res.json(hel)
   res.json(milIDStructure)
 })
 
-//standardTimestamp_homMaliRice
+//Daily Query
+app.get('/grafana/get_query_daily', (req, res) => {
+  res.json(milIDStructure_Daily)
+})
 
+//Monthly Query
+app.get('/grafana/get_query_monthly', (req, res) => {
+  res.json(milIDStructure_Monthly)
+})
 
+//------------------------------Daily, Monthly, and weekly (Weekly)------------------------------//
 
-//------------------------------Daily, Monthly, and weekly------------------------------//
-var hel 
 var milIDStructure
-app.get('/query_timerange/', function(req, res) {
+app.get('/query_timerange_weekly/', function(req, res) {
   var startTime = req.query.starttime
-  var endTime = req.query.endtime
-  let range = req.query.range 
+  var endTime = req.query.endtime 
   let url = listInference;
   var timerange 
   
- 
+  /*
   if(range == "1h"){
     timerange = 3600000
   }else if(range == "1d"){
@@ -218,8 +247,8 @@ app.get('/query_timerange/', function(req, res) {
   }else{
     timerange = 3600000
   }
-  
-  console.log(range)
+  */
+  timerange = 604800000
 
   http.get(url,(res) => {
       let body = "";
@@ -230,21 +259,13 @@ app.get('/query_timerange/', function(req, res) {
       res.on("end", () => {
           try { 
               let json = JSON.parse(body);
-
-              hel = [
-                {
-                    "target": "timerange",
-                    "datapoints": [
-                        
-                    ]
-                }
-              ]
               
               let fakeArray = []
               let currentTimeUnix = new Date(startTime).getTime()
               let endTimeUnix = new Date(endTime).getTime()
               let currentTimeUnixPrev
               let iteration
+
 
               if(endTime=="now"){
                 endTimeUnix = Date.now()
@@ -271,7 +292,7 @@ app.get('/query_timerange/', function(req, res) {
                 }
                 milIDStructure.push(struc)
               })
-              console.log(milIDStructure)
+              //console.log(milIDStructure)
 
               //test
               _.each(json.data, function(inside) {
@@ -286,31 +307,12 @@ app.get('/query_timerange/', function(req, res) {
                 }
                 
               });
-              console.log(fakeArray)
+              //console.log(fakeArray)
 
-
-              // do something with JSON by filtering riceInspectProcessing data
-             /*
-              _.each(json.data, function(inside) {
-                
-                if(new Date(inside.myDate).getTime()  >= currentTimeUnix & new Date(inside.myDate).getTime()  <= endTimeUnix ){
-                  
-                  day = new Date(inside.myDate).getTime() 
-                  fakeArray.push(day)
-                
-                  
-                }
-                
-              });
-              
-              let lowestToHighest = fakeArray.sort((a, b) => a - b);
-              console.log(lowestToHighest)
-              */
-              
 
 
               async function prepareData(usernameInput){
-                console.log("----------Username = "+usernameInput)
+                //console.log("----------Username = "+usernameInput)
                 currentTimeUnix = new Date(startTime).getTime()
                 
 
@@ -326,7 +328,7 @@ app.get('/query_timerange/', function(req, res) {
                       iteration += 1
                     }
                   });
-                  console.log("Summation = "+iteration)  
+                  //console.log("Summation = "+iteration)  
                   
 
                   if(currentTimeUnix>endTimeUnix){
@@ -335,15 +337,12 @@ app.get('/query_timerange/', function(req, res) {
                         i.datapoints.push([iteration, endTimeUnix])
                       }
                     });
-                    //hel[0].datapoints.push([iteration, endTimeUnix])
                   }else{
                     _.each(milIDStructure, function(i){
                       if(i.target == usernameInput){
                         i.datapoints.push([iteration, currentTimeUnix])
                       }
                     });
-
-                    //hel[0].datapoints.push([iteration, currentTimeUnix])
                   }
                   
                                     
@@ -355,33 +354,6 @@ app.get('/query_timerange/', function(req, res) {
                 prepareData(t)
               });
               
-              
-
-
-              /*
-              while(currentTimeUnix<=endTimeUnix){
-                  iteration = 0
-                  currentTimeUnixPrev = currentTimeUnix
-                  currentTimeUnix += timerange
-                  //console.log(currentTimeUnixPrev + " ----------- "+currentTimeUnix + " ------ limit: " + endTimeUnix + " timerange: "+timerange)
-                  
-                  _.each(lowestToHighest, function(t){
-                    if(t >= currentTimeUnixPrev && t<= currentTimeUnix){
-                      //console.log("++++ " +  t  + "  :iteration : " + iteration)
-                      iteration += 1
-                    }
-                  });
-                  console.log("Summation = "+iteration)  
-
-                  if(currentTimeUnix>endTimeUnix){
-                    hel[0].datapoints.push([iteration, endTimeUnix])
-                  }else{
-                    hel[0].datapoints.push([iteration, currentTimeUnix])
-                  }
-                  
-                                    
-              }
-              */
                                 
           } catch (error) {
               console.log("This is the part where it is error");
@@ -393,11 +365,292 @@ app.get('/query_timerange/', function(req, res) {
       
   });
   res.json(milIDStructure);
-  //res.json(hel);
 })
 
 
 
+//------------------------------Daily, Monthly, and weekly (Daily)------------------------------//
+
+var milIDStructure_Daily
+app.get('/query_timerange_daily/', function(req, res) {
+  var startTime = req.query.starttime
+  var endTime = req.query.endtime 
+  let url = listInference;
+  var timerange 
+  
+  /*
+  if(range == "1h"){
+    timerange = 3600000
+  }else if(range == "1d"){
+    timerange = 86400000
+  }else if(range == "1w"){
+    timerange = 604800000
+  }else if(range == "1m"){
+    timerange = 2592000000
+  }else{
+    timerange = 3600000
+  }
+  */
+  timerange = 86400000
+
+  http.get(url,(res) => {
+      let body = "";
+    
+      res.on("data", (chunk) => {
+          body += chunk;
+      });
+      res.on("end", () => {
+          try { 
+              let json = JSON.parse(body);
+              
+              let fakeArray = []
+              let currentTimeUnix = new Date(startTime).getTime()
+              let endTimeUnix = new Date(endTime).getTime()
+              let currentTimeUnixPrev
+              let iteration
+
+
+              if(endTime=="now"){
+                endTimeUnix = Date.now()
+              }
+              
+              // Collect all miller name into list and make it unique
+              let millIDList = []
+              _.each(json.data, function(i){
+                  if(i.username != null){
+                    millIDList.push(i.username)
+                  }           
+              });
+              millIDList = [...new Set(millIDList)];
+             
+              //Initiate Structure
+              milIDStructure_Daily = []
+              _.each(millIDList, function(t){
+                let struc = 
+                {
+                  "target": t,
+                  "datapoints": [
+                          
+                  ]
+                }
+                milIDStructure_Daily.push(struc)
+              })
+              //console.log(milIDStructure_Daily)
+
+              //test
+              _.each(json.data, function(inside) {
+                
+                if(new Date(inside.myDate).getTime()  >= currentTimeUnix & new Date(inside.myDate).getTime()  <= endTimeUnix ){
+                  
+                  let tmp = {
+                    "username": inside.username,
+                    "date":  new Date(inside.myDate).getTime() 
+                  }
+                  fakeArray.push(tmp) 
+                }
+                
+              });
+              //console.log(fakeArray)
+
+
+
+              async function prepareData(usernameInput){
+                //console.log("----------Username = "+usernameInput)
+                currentTimeUnix = new Date(startTime).getTime()
+                
+
+                while(currentTimeUnix<=endTimeUnix){
+                  iteration = 0
+                  currentTimeUnixPrev = currentTimeUnix
+                  currentTimeUnix += timerange
+                  //console.log(currentTimeUnixPrev + " ----------- "+currentTimeUnix + " ------ limit: " + endTimeUnix + " timerange: "+timerange)
+                  
+                  _.each(fakeArray, function(t){
+                    if(t.date >= currentTimeUnixPrev && t.date <= currentTimeUnix && t.username == usernameInput){
+                      //console.log("++++ " +  t.date  + "  :iteration : " + iteration)
+                      iteration += 1
+                    }
+                  });
+                  //console.log("Summation = "+iteration)  
+                  
+
+                  if(currentTimeUnix>endTimeUnix){
+                    _.each(milIDStructure_Daily, function(i){
+                      if(i.target == usernameInput){
+                        i.datapoints.push([iteration, endTimeUnix])
+                      }
+                    });
+                  }else{
+                    _.each(milIDStructure_Daily, function(i){
+                      if(i.target == usernameInput){
+                        i.datapoints.push([iteration, currentTimeUnix])
+                      }
+                    });
+                  }
+                  
+                                    
+              }
+              
+              }
+              //Loop through every miller and prepare indivudual data for each miller
+              _.each(millIDList, function(t){
+                prepareData(t)
+              });
+              
+                                
+          } catch (error) {
+              console.log("This is the part where it is error");
+              console.error(error.message);
+          };
+      });      
+  }).on("error", (error) => {
+      console.error(error.message);
+      
+  });
+  res.json(milIDStructure_Daily);
+})
+
+
+//------------------------------Daily, Monthly, and weekly (Monthly)------------------------------//
+
+var milIDStructure_Monthly
+app.get('/query_timerange_monthly/', function(req, res) {
+  var startTime = req.query.starttime
+  var endTime = req.query.endtime 
+  let url = listInference;
+  var timerange 
+  
+  /*
+  if(range == "1h"){
+    timerange = 3600000
+  }else if(range == "1d"){
+    timerange = 86400000
+  }else if(range == "1w"){
+    timerange = 604800000
+  }else if(range == "1m"){
+    timerange = 2592000000
+  }else{
+    timerange = 3600000
+  }
+  */
+  timerange = 2592000000
+
+  http.get(url,(res) => {
+      let body = "";
+    
+      res.on("data", (chunk) => {
+          body += chunk;
+      });
+      res.on("end", () => {
+          try { 
+              let json = JSON.parse(body);
+              
+              let fakeArray = []
+              let currentTimeUnix = new Date(startTime).getTime()
+              let endTimeUnix = new Date(endTime).getTime()
+              let currentTimeUnixPrev
+              let iteration
+
+
+              if(endTime=="now"){
+                endTimeUnix = Date.now()
+              }
+              
+              // Collect all miller name into list and make it unique
+              let millIDList = []
+              _.each(json.data, function(i){
+                  if(i.username != null){
+                    millIDList.push(i.username)
+                  }           
+              });
+              millIDList = [...new Set(millIDList)];
+             
+              //Initiate Structure
+              milIDStructure_Monthly = []
+              _.each(millIDList, function(t){
+                let struc = 
+                {
+                  "target": t,
+                  "datapoints": [
+                          
+                  ]
+                }
+                milIDStructure_Monthly.push(struc)
+              })
+              //console.log(milIDStructure_Monthly)
+
+              //test
+              _.each(json.data, function(inside) {
+                
+                if(new Date(inside.myDate).getTime()  >= currentTimeUnix & new Date(inside.myDate).getTime()  <= endTimeUnix ){
+                  
+                  let tmp = {
+                    "username": inside.username,
+                    "date":  new Date(inside.myDate).getTime() 
+                  }
+                  fakeArray.push(tmp) 
+                }
+                
+              });
+              //console.log(fakeArray)
+
+
+
+              async function prepareData(usernameInput){
+                //console.log("----------Username = "+usernameInput)
+                currentTimeUnix = new Date(startTime).getTime()
+                
+
+                while(currentTimeUnix<=endTimeUnix){
+                  iteration = 0
+                  currentTimeUnixPrev = currentTimeUnix
+                  currentTimeUnix += timerange
+                  //console.log(currentTimeUnixPrev + " ----------- "+currentTimeUnix + " ------ limit: " + endTimeUnix + " timerange: "+timerange)
+                  
+                  _.each(fakeArray, function(t){
+                    if(t.date >= currentTimeUnixPrev && t.date <= currentTimeUnix && t.username == usernameInput){
+                      //console.log("++++ " +  t.date  + "  :iteration : " + iteration)
+                      iteration += 1
+                    }
+                  });
+                  //console.log("Summation = "+iteration)  
+                  
+
+                  if(currentTimeUnix>endTimeUnix){
+                    _.each(milIDStructure_Monthly, function(i){
+                      if(i.target == usernameInput){
+                        i.datapoints.push([iteration, endTimeUnix])
+                      }
+                    });
+                  }else{
+                    _.each(milIDStructure_Monthly, function(i){
+                      if(i.target == usernameInput){
+                        i.datapoints.push([iteration, currentTimeUnix])
+                      }
+                    });
+                  }
+                  
+                                    
+              }
+              
+              }
+              //Loop through every miller and prepare indivudual data for each miller
+              _.each(millIDList, function(t){
+                prepareData(t)
+              });
+              
+                                
+          } catch (error) {
+              console.log("This is the part where it is error");
+              console.error(error.message);
+          };
+      });      
+  }).on("error", (error) => {
+      console.error(error.message);
+      
+  });
+  res.json(milIDStructure_Monthly);
+})
 
 //--------------------------------------------------list and filterstandard for whiteRiceStandard--------------------//
 
