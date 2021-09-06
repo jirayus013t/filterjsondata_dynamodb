@@ -43,9 +43,9 @@ Array.prototype.unique = function() {
 var queryURL2 = "http://localhost:3339/query/?&Status=All&revert=1"
 var querytableURL2 = "http://localhost:3339/query_table_riceinspectprocessing"
 
-var queryData_Weekly = "http://localhost:3339/query_timerange_weekly/?starttime=2021-01-01T00:00:00&endtime=now"
-var queryData_Daily = "http://localhost:3339/query_timerange_daily/?starttime=2021-01-01T00:00:00&endtime=now"
-var queryData_Monthly = "http://localhost:3339/query_timerange_monthly/?starttime=2021-01-01T00:00:00&endtime=now"
+var queryData_Weekly = "http://localhost:3339/query_timerange_weekly/?starttime=2021-01-02T00:00:00&endtime=now"
+var queryData_Daily = "http://localhost:3339/query_timerange_daily/?starttime=2021-01-02T00:00:00&endtime=now"
+var queryData_Monthly = "http://localhost:3339/query_timerange_monthly/?starttime=2021-01-02T00:00:00&endtime=now"
 
 
 
@@ -77,6 +77,7 @@ initData()
   }
   */
 
+
 http.get(queryData_Weekly)
 http.get(queryData_Daily)
 http.get(queryData_Monthly)
@@ -87,12 +88,18 @@ setInterval(function(){ http.get(queryData_Monthly) }, 86400000);
 
 app.get('/update_data_listinference', function(req, res) {
   initData()
+  http.get(queryData_Weekly)
+  http.get(queryData_Daily)
+  http.get(queryData_Monthly)
   res.json("Update data listinference function has been executed")
 });
 
 
 app.get('/update_data_RiceInferenceProcessing', function(req, res) {
   initData()
+  http.get(queryData_Weekly)
+  http.get(queryData_Daily)
+  http.get(queryData_Monthly)
   res.json("Update data RiceInspectProcessing function has been executed")
 });
 
@@ -483,7 +490,7 @@ app.get('/query_timerange_daily/', function(req, res) {
                   }else{
                     _.each(milIDStructure_Daily, function(i){
                       if(i.target == usernameInput){
-                        i.datapoints.push([iteration, currentTimeUnix])
+                        i.datapoints.push([iteration, currentTimeUnix-timerange])
                       }
                     });
                   }
@@ -512,6 +519,23 @@ app.get('/query_timerange_daily/', function(req, res) {
 
 
 //------------------------------Daily, Monthly, and weekly (Monthly)------------------------------//
+var timerangeList = [
+  2592000000,
+  2592000000-86400000-86400000,
+  2592000000+86400000,
+  2592000000,
+  2592000000+86400000,
+  2592000000,
+  2592000000+86400000,
+  2592000000+86400000,
+  2592000000,
+  2592000000+86400000,
+  2592000000,
+  2592000000+86400000
+
+]
+var monthIndex 
+
 
 var milIDStructure_Monthly
 app.get('/query_timerange_monthly/', function(req, res) {
@@ -534,7 +558,8 @@ app.get('/query_timerange_monthly/', function(req, res) {
   }
   */
   timerange = 2592000000
-
+  
+  
   http.get(url,(res) => {
       let body = "";
     
@@ -599,12 +624,13 @@ app.get('/query_timerange_monthly/', function(req, res) {
               async function prepareData(usernameInput){
                 //console.log("----------Username = "+usernameInput)
                 currentTimeUnix = new Date(startTime).getTime()
-                
-
+                monthIndex = 0
+  
                 while(currentTimeUnix<=endTimeUnix){
                   iteration = 0
                   currentTimeUnixPrev = currentTimeUnix
-                  currentTimeUnix += timerange
+                  //currentTimeUnix += timerange
+                  currentTimeUnix += timerangeList[monthIndex]
                   //console.log(currentTimeUnixPrev + " ----------- "+currentTimeUnix + " ------ limit: " + endTimeUnix + " timerange: "+timerange)
                   
                   _.each(fakeArray, function(t){
@@ -625,10 +651,13 @@ app.get('/query_timerange_monthly/', function(req, res) {
                   }else{
                     _.each(milIDStructure_Monthly, function(i){
                       if(i.target == usernameInput){
-                        i.datapoints.push([iteration, currentTimeUnix])
+                        //i.datapoints.push([iteration, currentTimeUnix-timerange])
+                        i.datapoints.push([iteration, currentTimeUnix-timerangeList[monthIndex]])
                       }
                     });
                   }
+
+                  monthIndex += 1
                   
                                     
               }
